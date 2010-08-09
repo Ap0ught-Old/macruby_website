@@ -7,7 +7,7 @@ filter:
 ---
 h1(title). <%= h(@page.title) %>
 
-HotCocoa is a thin, idiomatic Ruby layer that sits above Cocoa and other frameworks. HotCocoa will be included with MacRuby when it ships in future versions of OS X and is currently included in the MacRuby distributions. 
+HotCocoa is a thin, idiomatic Ruby layer that sits above Cocoa and other frameworks. HotCocoa is currently included in the MacRuby distributions. 
 
 Cocoa classes have extremely large method and constant names. A substantial amount of code is written to just instantiate and configure instances of these classes. Interface Builder is used by most developers because it hides the complexity of manually configuring controls, but at the expense have having to use a GUI builder and the obscuring those configuration options inside the IB user interface. One of HotCocoa's chief goals is to allow Interface Builder simplicity, but in Ruby code. 
 
@@ -47,4 +47,6 @@ h3. In HotCocoa, Mappings provide the following:
 
 h3. Want to learn more about HotCocoa?
 
-Now that you understand the basics of what HotCocoa is and why we are building it, please look at the "HotCocoa Tutorial":# (coming soon) for examples of how to build OS X applications with it. For a more detailed understanding of how to read, create, edit or contribute mapping files, see "HotCocoa Mappings Tutorial":/hotcocoa/mappings.html. For the current status of the project, see "HotCocoa Mapping Status":/hotcocoa/status.html.
+Now that you understand the basics of what HotCocoa is and why we are building it, please look at the "tutorials":/documentation.html for examples of how to build OS X applications with it. 
+
+HotCocoa is a project developed on "GitHub":http://github.com/richkilmer/hotcocoa. Make sure to connect there to get the latest bits.

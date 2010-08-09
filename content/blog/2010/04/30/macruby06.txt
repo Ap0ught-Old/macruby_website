@@ -1,0 +1,157 @@
+--- 
+title:      MacRuby 0.6
+created_at: 2010-04-30 17:36:50.941452 -07:00
+blog_post:  true
+layout:     blog_entry
+author:     lrz
+filter:
+  - erb
+  - textile
+--- 
+<% @page[:excerpt] = capture_erb do %>
+We are pleased to announce the immediate availability of MacRuby 0.6. In the 3 months since the previous release, a number of new features have been added and the overall stability of MacRuby has been substantially improved.
+<% end %>
+<%= RedCloth.new(@page.excerpt).to_html %>
+
+You can download it from "here":http://www.macruby.org/files/MacRuby%200.6.zip. Please note that this package only runs on Snow Leopard (10.6). Users on Leopard (10.5) can also use MacRuby by "building the sources":/source.html from our repository.
+
+Please give it a try and "let us know":/contact-us.html of any problems you find.
+
+You can read about all the changes from the "release notes":http://lists.macosforge.org/pipermail/macruby-devel/2010-April/004722.html e-mail on the mailing-list, or keep up with the most visible changes here.
+
+h3. Stable for Cocoa Development
+
+In this release, we believe that MacRuby is now stable enough to consider using it to develop Cocoa applications.
+
+Since 0.5's release, we have worked closely with a number of early-adopter developers in finding and fixing a great number of bugs, as well as improving the overall process of creating Cocoa apps in MacRuby. We believe that MacRuby is now stable enough to permit the creation of complete and functional Cocoa applications that have access to the full suite of Cocoa APIs.
+
+The "Compile" target in Xcode allows an application to be ahead-of-time compiled to machine code, allowing the developer to avoid including the Ruby source in a shipping application.
+
+h3. Debugging
+
+Experimental support for debugging landed in this release.
+
+The compiler, under debug mode, is now generating special traps inside the code. The debugger connects to these traps and allows not only basic debugging operations but also code evaluation. 
+
+The macrubyd command-line executable pilots the debugger. It provides a gdb-like experience. Please note that it is not entirely finished and it also has not been exhaustively tested.
+
+Let's consider the following broken program:
+
+<pre class="commands">
+$ cat t.rb 
+def foo(n)
+  bar(n)
+end
+5.times do |i|
+  foo(i)
+end
+</pre>
+
+And start it inside the debugger.
+
+<pre class="commands">
+$ macrubyd t.rb 
+Starting program.
+1	def foo(n)
+t.rb:1> c
+/Users/lrz/src/t.rb:2:in `foo:': undefined method `bar' for main:TopLevel (NoMethodError)
+	from /Users/lrz/src/t.rb:5:in `block'
+	from /Users/lrz/src/t.rb:4:in `<main>'
+Program exited.
+</pre>
+
+We immediately get an exception at line 2. We can restart the debugger, break at this line, then examine the argument and the backtrace.
+
+<pre class="commands">
+> r
+Starting program.
+1	def foo(n)
+t.rb:1> b t.rb:2
+Added breakpoint 1.
+1	def foo(n)
+t.rb:1> c
+2	  bar(n)
+t.rb:2> p n
+=> 0
+2	  bar(n)
+t.rb:2> bt
+#0	/Users/lrz/src/t.rb:2:in `foo:'
+#1	/Users/lrz/src/t.rb:5:in `block'
+#2	/Users/lrz/src/t.rb:4:in `<main>'
+2	  bar(n)
+</pre>
+
+Then, we can define the missing method on the fly and resume the execution of the program after disabling the breakpoint.
+
+<pre class="commands">
+t.rb:2> p def bar(x); puts "-> #{x}"; end
+=> nil
+2	  bar(n)
+t.rb:2> disable 1
+Disabled breakpoint 1.
+2	  bar(n)
+t.rb:2> c
+-> 0
+-> 1
+-> 2
+-> 3
+-> 4
+Program exited.
+</pre>
+
+An interesting feature of the debugger is that it has been abstracted into a simple Objective-C API, of which macrubyd is just one client. In the future we might see other clients.
+
+h3. Higher-Level APIs for Grand Central Dispatch 
+
+<a href="http://en.wikipedia.org/wiki/Grand_Central_Dispatch">GCD</a> is a revolutionary approach to multicore computing that is woven throughout the fabric of Mac OS X version 10.6 Snow Leopard. It is supported in MacRuby since version 0.5, through the Dispatch module.
+
+In MacRuby 0.6, we improved the existing native bindings with additional, higher-level abstractions and convenience APIs in the "dispatch" library. We believe these features will help reduce the learning curve for GCD.
+
+The new "dispatch" library exposes the Job class, which is likely the easiest way to perform concurrent work. Say you have a complex, long-running calculation you want to happen in the background. Create a job by passing Dispatch::Job's initializer the block you want to execute:
+
+<pre class="commands">
+$ /usr/local/bin/macirb --simple-prompt
+>> require 'dispatch'
+=> true
+>> job = Dispatch::Job.new { Math.sqrt(10**100) }
+=> #<Dispatch::Job:0x40075d1e0 @queue=com.apple.root.default-priority @group=#<Dispatch::Group:0x40073c2c0> @values=[1.0e+50]>
+</pre>
+
+This atomically adds the block to GCD's default concurrent queue, then returns immediately, so you don't stall the main thread.
+
+The downside is that you don't know exactly when your job will execute. The #value method can be used to obtain the result of executing that block.
+
+<pre class="commands">
+>> value = job.value
+=> 1.0e+50
+</pre>
+
+This will wait until the value has been calculated, allowing it to be used as an "explicit Future":http://en.wikipedia.org/wiki/Futures_and_promises. However, this may stall the main thread indefinitely, which reduces the benefits of concurrency.
+
+There are much more convenience APIs in the "dispatch" library, such as the Proxy class or concurrent extensions to the builtin Enumerable module. Check out the "tutorial":http://svn.macosforge.org/repository/ruby/MacRuby/trunk/lib/dispatch/README.rdoc for more information.
+
+h3. Solid Foundations
+
+We have rewritten much of the foundation layer of MacRuby in this release, with the goal of increasing the overall robustness of the system and providing a better platform for future enhancements.
+
+The Hash class, which used to be an alias to NSMutableDictionary, is now a new class that inherits from the latter. It can more efficiently handle immediate types (such as fixnums and floats) and honors insertion ordering.
+
+The String class has also been changed. It is now a fresh new implementation that can handle both character and byte strings. It also uses the "ICU framework":http://site.icu-project.org/ to perform encoding conversions on the fly. This new class inherits from NSMutableString. Symbol was also rewritten to handle multibyte (Unicode) characters.
+
+Finally, the Regexp class has been totally rewritten in this release. It is now using the ICU framework instead of Oniguruma for regular expression compilation and pattern matching. Since ICU is thread-safe, MacRuby 0.6 allows multiple threads to utilize regular expressions in a very efficient way, which was not possible previously.
+
+All these changes were designed and implemented to honor compatibility with previous releases of MacRuby. They should not be directly visible.
+
+h3. Better Ruby Compatibility
+
+Ruby compatibility is still progressing but is now much better than in 0.5.
+
+MacRuby 0.6 provides support for C extensions written for the original implementation of ruby. We were able to successfully use the Nokogiri, SQLite3 and PostgreSQL extensions from MacRuby.
+
+This release also passes about 85% of "RubySpecs":http://rubyspec.org, is able to run a modified version of Rails 3, and implements better support for Ruby 1.9 encodings.
+
+There are still several problems to address in order to provide a full-fidelity replacement for all Ruby features. We intend to continue working on this by focusing on RubySpecs and Rails.
+
+We hope you enjoy the many improvements in this release!
+
+Development on the next release, 0.7 just started. In that release, we intend to deliver a next generation compiler and virtual machine that provides very good runtime performance for multicore environments. Stay tuned for more updates!
